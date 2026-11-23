@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Paddy Leaf Disease Classifier</title>
+  <style>
+    :root {
+      --bg: #0f1512;
+      --card: #16211c;
+      --accent: #7fd858;
+      --text: #eef2ee;
+      --muted: #8ba396;
+      --border: #263229;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 4px 0;
+    }
+
+    p.subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 24px 0;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent);
+    }
+
+    .drop-zone span {
+      display: block;
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    #preview {
+      display: none;
+      width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 12px;
+      margin-top: 16px;
+    }
+
+    button#predictBtn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #0f1512;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button#predictBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #result {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .prediction-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 16px;
+    }
+
+    .prediction-label {
+      font-size: 22px;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .prediction-confidence {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .bar-label {
+      width: 140px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: capitalize;
+    }
+
+    .bar-track {
+      flex: 1;
+      background: var(--border);
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 6px;
+    }
+
+    .bar-pct {
+      width: 48px;
+      font-size: 12px;
+      text-align: right;
+      color: var(--muted);
+    }
+
+    #gradcamSection {
+      margin-top: 24px;
+      display: none;
+    }
+
+    #gradcamSection h3 {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 0 0 10px 0;
+    }
+
+    #gradcamImage {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    #gradcamCaption {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    #errorMsg {
+      display: none;
+      color: #ff8a8a;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    #apiUrlRow {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #apiUrlRow input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 6px 8px;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .toggle-row input {
+      width: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h1>Paddy Leaf Disease Classifier</h1>
+    <p class="subtitle">Upload a photo of a paddy leaf to check for disease</p>
+
+    <div class="drop-zone" id="dropZone">
+      <div>📷</div>
+      <span id="dropZoneText">Click or drag a leaf photo here</span>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+    <img id="preview" alt="preview">
+
+    <div class="toggle-row">
+      <input type="checkbox" id="gradcamToggle" checked>
+      <label for="gradcamToggle">Show Grad-CAM heatmap (which region the model focused on)</label>
+    </div>
+
+    <button id="predictBtn" disabled>Analyze Leaf</button>
+
+    <div id="errorMsg"></div>
+
+    <div id="result">
+      <div class="prediction-header">
+        <div class="prediction-label" id="predLabel">-</div>
+        <div class="prediction-confidence" id="predConfidence">-</div>
+      </div>
+      <div id="barChart"></div>
+
+      <div id="gradcamSection">
+        <h3>Where the model looked</h3>
+        <img id="gradcamImage" alt="Grad-CAM heatmap">
+        <div id="gradcamCaption">
+          Warm colors (red/orange) show the regions that most influenced the
+          prediction. Cooler colors (blue) had little effect.
+        </div>
+      </div>
+    </div>
+
+    <div id="apiUrlRow">
+      API endpoint (change if your server runs elsewhere):
+      <input type="text" id="apiUrl" value="http://127.0.0.1:8000">
+    </div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const dropZoneText = document.getElementById('dropZoneText');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const predictBtn = document.getElementById('predictBtn');
+    const resultDiv = document.getElementById('result');
+    const errorMsg = document.getElementById('errorMsg');
+    const predLabel = document.getElementById('predLabel');
+    const predConfidence = document.getElementById('predConfidence');
+    const barChart = document.getElementById('barChart');
+    const apiUrlInput = document.getElementById('apiUrl');
+    const gradcamToggle = document.getElementById('gradcamToggle');
+    const gradcamSection = document.getElementById('gradcamSection');
+    const gradcamImage = document.getElementById('gradcamImage');
+
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        handleFile(fileInput.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+      dropZoneText.textContent = file.name;
+      predictBtn.disabled = false;
+      resultDiv.style.display = 'none';
+      errorMsg.style.display = 'none';
+    }
+
+    predictBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      predictBtn.disabled = true;
+      predictBtn.textContent = 'Analyzing...';
+      errorMsg.style.display = 'none';
+      resultDiv.style.display = 'none';
+
+      const useGradcam = gradcamToggle.checked;
+      const baseUrl = apiUrlInput.value.replace(/\/$/, '');
+      const endpoint = useGradcam ? `${baseUrl}/predict-with-gradcam` : `${baseUrl}/predict`;
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server returned status ${response.status}`);
+        }
+
+        const data = await response.json();
+        showResult(data, useGradcam);
+      } catch (err) {
+        errorMsg.textContent = 'Could not reach the API. Make sure the FastAPI server is running and the endpoint above is correct. (' + err.message + ')';
+        errorMsg.style.display = 'block';
+      } finally {
+        predictBtn.disabled = false;
+        predictBtn.textContent = 'Analyze Leaf';
+      }
+    });
+
+    function showResult(data, useGradcam) {
+      predLabel.textContent = data.prediction.replace(/_/g, ' ');
+      predConfidence.textContent = (data.confidence * 100).toFixed(1) + '% confident';
+
+      const entries = Object.entries(data.probabilities).sort((a, b) => b[1] - a[1]);
+
+      barChart.innerHTML = '';
+      entries.forEach(([className, prob]) => {
+        const pct = (prob * 100).toFixed(1);
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        row.innerHTML = `
+      <div class="bar-label">${className.replace(/_/g, ' ')}</div>
+      <div class="bar-track"><div class="bar-fill" style="width: ${pct}%"></div></div>
+      <div class="bar-pct">${pct}%</div>
+    `;
+        barChart.appendChild(row);
+      });
+
+      if (useGradcam && data.gradcam_image_base64) {
+        gradcamImage.src = 'data:image/png;base64,' + data.gradcam_image_base64;
+        gradcamSection.style.display = 'block';
+      } else {
+        gradcamSection.style.display = 'none';
+      }
+
+      resultDiv.style.display = 'block';
+    }
+  </script>
+
+</body>
+
+</html>

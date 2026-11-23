@@ -1,0 +1,13 @@
+torch
+torchvision
+albumentations
+grad-cam
+scikit-learn
+fastapi
+uvicorn[standard]
+pytest
+pandas
+opencv-python
+pillow
+matplotlib
+python-multipart
